@@ -47,7 +47,9 @@ public class ResultSetWrapper {
   private final List<String> classNames = new ArrayList<>();
   private final List<JdbcType> jdbcTypes = new ArrayList<>();
   private final Map<String, Map<Class<?>, TypeHandler<?>>> typeHandlerMap = new HashMap<>();
+  // ResultSet 与 ResultMap 映射的列的交集，及参与映射的列
   private final Map<String, List<String>> mappedColumnNamesMap = new HashMap<>();
+  // ResultSet 与 ResultMap 不参与映射的列
   private final Map<String, List<String>> unMappedColumnNamesMap = new HashMap<>();
 
   public ResultSetWrapper(ResultSet rs, Configuration configuration) throws SQLException {
