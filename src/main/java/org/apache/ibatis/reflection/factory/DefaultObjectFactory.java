@@ -48,8 +48,10 @@ public class DefaultObjectFactory implements ObjectFactory, Serializable {
   @SuppressWarnings("unchecked")
   @Override
   public <T> T create(Class<T> type, List<Class<?>> constructorArgTypes, List<Object> constructorArgs) {
+    // 如果是常用接口类型，返回其常用实现类，例如 List 类型返回 ArrayList.class
+    // 否则直接返回 type 自身
     Class<?> classToCreate = resolveInterface(type);
-    // we know types are assignable
+    // 通过得到的类型创建对象
     return (T) instantiateClass(classToCreate, constructorArgTypes, constructorArgs);
   }
 
@@ -57,6 +59,7 @@ public class DefaultObjectFactory implements ObjectFactory, Serializable {
     try {
       Constructor<T> constructor;
       if (constructorArgTypes == null || constructorArgs == null) {
+        // 如果没参数则调用无参构造创建对象
         constructor = type.getDeclaredConstructor();
         try {
           return constructor.newInstance();
@@ -69,10 +72,13 @@ public class DefaultObjectFactory implements ObjectFactory, Serializable {
           }
         }
       }
+      // 否则利用参数构造对象
       constructor = type.getDeclaredConstructor(constructorArgTypes.toArray(new Class[0]));
       try {
+        // 调用有参构造
         return constructor.newInstance(constructorArgs.toArray(new Object[0]));
       } catch (IllegalAccessException e) {
+        // 如果创建失败，并且可以修改访问权限，则修改权限后再尝试创建实例
         if (Reflector.canControlMemberAccessible()) {
           constructor.setAccessible(true);
           return constructor.newInstance(constructorArgs.toArray(new Object[0]));

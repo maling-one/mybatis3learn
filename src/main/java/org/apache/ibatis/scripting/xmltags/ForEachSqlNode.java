@@ -65,23 +65,27 @@ public class ForEachSqlNode implements SqlNode {
   @Override
   public boolean apply(DynamicContext context) {
     Map<String, Object> bindings = context.getBindings();
+    // 解析 `<foreach>` 标签中 collection 属性指定的表达式，得到一个迭代器
     final Iterable<?> iterable = evaluator.evaluateIterable(collectionExpression, bindings,
       Optional.ofNullable(nullable).orElseGet(configuration::isNullableOnForEach));
     if (iterable == null || !iterable.iterator().hasNext()) {
       return true;
     }
     boolean first = true;
+    // 向 DynamicContext.sqlBuilder 中追加 open 属性值指定的字符串
     applyOpen(context);
     int i = 0;
+    // 遍历迭代器
     for (Object o : iterable) {
       DynamicContext oldContext = context;
+      // 调用 PrefixedContext 为每个元素创建一个 PrefixedContext 对象
       if (first || separator == null) {
         context = new PrefixedContext(context, "");
       } else {
         context = new PrefixedContext(context, separator);
       }
       int uniqueNumber = context.getUniqueNumber();
-      // Issue #709
+      // 针对 Map、Set 做不同处理
       if (o instanceof Map.Entry) {
         @SuppressWarnings("unchecked")
         Map.Entry<Object, Object> mapEntry = (Map.Entry<Object, Object>) o;
@@ -91,6 +95,7 @@ public class ForEachSqlNode implements SqlNode {
         applyIndex(context, i, uniqueNumber);
         applyItem(context, o, uniqueNumber);
       }
+      // 会调用 <foreach> 标签下子 SqlNode 的 apply() 方法
       contents.apply(new FilteredDynamicContext(configuration, context, index, item, uniqueNumber));
       if (first) {
         first = !((PrefixedContext) context).isPrefixApplied();
@@ -98,7 +103,9 @@ public class ForEachSqlNode implements SqlNode {
       context = oldContext;
       i++;
     }
+    // 迭代完成后，追加 close 属性指定的后缀
     applyClose(context);
+    // 从 DynamicContext 上下文中删除 index 属性值和 item 属性值指定的变量
     context.getBindings().remove(item);
     context.getBindings().remove(index);
     return true;
@@ -106,14 +113,19 @@ public class ForEachSqlNode implements SqlNode {
 
   private void applyIndex(DynamicContext context, Object o, int i) {
     if (index != null) {
+      // Key 值与 index 属性值指定的变量名称绑定
       context.bind(index, o);
+      // Key值还会与 "__frch_" + index 属性值 + "_" + i 这个变量绑定
+      // 这里传入的 i 是一个自增序列，由底层的 DynamicContext 统一维护
       context.bind(itemizeItem(index, i), o);
     }
   }
 
   private void applyItem(DynamicContext context, Object o, int i) {
     if (item != null) {
+      // Value 值与 item 属性值指定的变量名称绑定
       context.bind(item, o);
+      // Value 值还会与 "__frch_" + item 属性值 + "_" + i 这个变量绑定
       context.bind(itemizeItem(item, i), o);
     }
   }
@@ -165,14 +177,17 @@ public class ForEachSqlNode implements SqlNode {
 
     @Override
     public void appendSql(String sql) {
+      // 创建识别 "#{}" 的 GenericTokenParser 解析器
       GenericTokenParser parser = new GenericTokenParser("#{", "}", content -> {
+        // 这个 TokenHandler 实现会将 #{i} 替换成 #{__frch_i_0}、#{__frch_i_1}...
         String newContent = content.replaceFirst("^\\s*" + item + "(?![^.,:\\s])", itemizeItem(item, index));
         if (itemIndex != null && newContent.equals(content)) {
+          // 这里会将 #{j} 替换成 #{__frch_j_0}、#{__frch_j_1}...
           newContent = content.replaceFirst("^\\s*" + itemIndex + "(?![^.,:\\s])", itemizeItem(itemIndex, index));
         }
         return "#{" + newContent + "}";
       });
-
+      // 保存解析后的 SQL 片段
       delegate.appendSql(parser.parse(sql));
     }
 

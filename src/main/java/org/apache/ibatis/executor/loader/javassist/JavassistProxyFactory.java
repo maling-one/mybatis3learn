@@ -124,7 +124,7 @@ public class JavassistProxyFactory implements org.apache.ibatis.executor.loader.
     public Object invoke(Object enhanced, Method method, Method methodProxy, Object[] args) throws Throwable {
       final String methodName = method.getName();
       try {
-        synchronized (lazyLoader) {
+        synchronized (lazyLoader) { // 在 lazyLoader 集合上加锁防止并发
           if (WRITE_REPLACE_METHOD.equals(methodName)) {
             Object original;
             if (constructorArgTypes.isEmpty()) {
@@ -139,13 +139,20 @@ public class JavassistProxyFactory implements org.apache.ibatis.executor.loader.
               return original;
             }
           } else {
+            // 通过 lazyLoader 集合的长度，判断是否存在延迟加载的属性。
             if (lazyLoader.size() > 0 && !FINALIZE_METHOD.equals(methodName)) {
+              // 优先检查全局的 aggressiveLazyLoading 配置和 lazyLoadTriggerMethods 配置
               if (aggressive || lazyLoadTriggerMethods.contains(methodName)) {
+                // 如果 aggressiveLazyLoading 配置为 true，或此次调用方法名称包含于 lazyLoadTriggerMethods 配置的方法名列表中，
+                // 会立刻将该对象的全部延迟加载属性都加载上来，即触发 ResultLoaderMap.loadAll() 方法。
                 lazyLoader.loadAll();
               } else if (PropertyNamer.isSetter(methodName)) {
+                // 检查此次调用的方法是否为属性对应的 setter 方法，如果是，则该属性已经被赋值，无须再执行延迟加载操作，
+                // 可以从 ResultLoaderMap 集合中删除该属性以及对应的 ResultLoader 对象。
                 final String property = PropertyNamer.methodToProperty(methodName);
                 lazyLoader.remove(property);
               } else if (PropertyNamer.isGetter(methodName)) {
+                // 检测此次调用的方法是否为属性对应的 getter 方法，如果是，触发对应的 ResultLoader.load() 方法，完成延迟加载。
                 final String property = PropertyNamer.methodToProperty(methodName);
                 if (lazyLoader.hasLoader(property)) {
                   lazyLoader.load(property);
@@ -154,6 +161,7 @@ public class JavassistProxyFactory implements org.apache.ibatis.executor.loader.
             }
           }
         }
+        // 完成上述延迟加载操作之后，会释放 loaderMap 集合上的锁，然后调用目标对象的方法，完成真正的属性读写操作。
         return methodProxy.invoke(enhanced, args);
       } catch (Throwable t) {
         throw ExceptionUtil.unwrapThrowable(t);

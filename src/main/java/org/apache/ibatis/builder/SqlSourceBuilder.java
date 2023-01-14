@@ -84,7 +84,10 @@ public class SqlSourceBuilder extends BaseBuilder {
 
     @Override
     public String handleToken(String content) {
+      // content是前面通过GenericTokenParser识别到的#{}占位符，
+      // 这里通过buildParameterMapping()方法进行解析，得到ParameterMapping对象
       parameterMappings.add(buildParameterMapping(content));
+      // 直接返回"?"占位符，替换原有的#{}占位符
       return "?";
     }
 

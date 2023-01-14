@@ -29,19 +29,22 @@ public abstract class BaseWrapper implements ObjectWrapper {
 
   protected static final Object[] NO_ARGUMENTS = new Object[0];
   protected final MetaObject metaObject;
-
+  // 构造方法就是注册一个 MetaObject
   protected BaseWrapper(MetaObject metaObject) {
     this.metaObject = metaObject;
   }
 
   protected Object resolveCollection(PropertyTokenizer prop, Object object) {
     if ("".equals(prop.getName())) {
+      // 如果 name 为空，则返回对象本身
       return object;
     } else {
+      // 否则根据 name 返回 metaObject 中的对象
       return metaObject.getValue(prop.getName());
     }
   }
 
+  // 如果是 Map 类型，则通过 index 中保存的 key 获取 value，否则通过 index 中保存的下标获取 value
   protected Object getCollectionValue(PropertyTokenizer prop, Object collection) {
     if (collection instanceof Map) {
       return ((Map) collection).get(prop.getIndex());
@@ -72,7 +75,7 @@ public abstract class BaseWrapper implements ObjectWrapper {
       }
     }
   }
-
+  // 与 get 类似
   protected void setCollectionValue(PropertyTokenizer prop, Object collection, Object value) {
     if (collection instanceof Map) {
       ((Map) collection).put(prop.getIndex(), value);

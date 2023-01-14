@@ -31,14 +31,28 @@ class PooledConnection implements InvocationHandler {
   private static final String CLOSE = "close";
   private static final Class<?>[] IFACES = new Class<?>[] { Connection.class };
 
-  private final int hashCode;
+  /*
+   * 记录当前 PooledConnection 对象归属的 PooledDataSource 对象。
+   * 也就是说，当前的 PooledConnection 是由该 PooledDataSource 对象创建的；
+   * 在通过 close() 方法关闭当前 PooledConnection 的时候，当前 PooledConnection 会被返还给该 PooledDataSource 对象。
+   */
   private final PooledDataSource dataSource;
+  // 当前 PooledConnection 底层的真正数据库连接对象
   private final Connection realConnection;
+  // 指向了 realConnection 数据库连接的代理对象
   private final Connection proxyConnection;
+  // 使用方从连接池中获取连接的时间戳
   private long checkoutTimestamp;
+  // 连接创建的时间戳
   private long createdTimestamp;
+  // 连接最后一次被使用的时间戳
   private long lastUsedTimestamp;
+  // 数据库连接的标识。该标识是由数据库 URL、username 和 password 三部分组合计算出来的 hash 值，主要用于连接对象确认归属的连接池
   private int connectionTypeCode;
+  /*
+   * 用于标识 PooledConnection 对象是否有效。该字段的主要目的是防止使用方将连接归还给连接池之后，
+   *  依然保留该 PooledConnection 对象的引用并继续通过该 PooledConnection 对象操作数据库。
+   */
   private boolean valid;
 
   /**
@@ -243,20 +257,21 @@ class PooledConnection implements InvocationHandler {
   public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
     String methodName = method.getName();
     if (CLOSE.equals(methodName)) {
+      // 如果调用 close() 方法，并没有直接关闭底层连接，而是将其归还给关联的连接池
       dataSource.pushConnection(this);
       return null;
     }
     try {
       if (!Object.class.equals(method.getDeclaringClass())) {
-        // issue #579 toString() should never fail
-        // throw an SQLException instead of a Runtime
+        // 只要不是 Object 的方法，都需要检测当前 PooledConnection 是否可用
+        // 如果连接不可用，就抛出异常
         checkConnection();
       }
+      // 如果连接可用，调用 realConnection 的对应方法
       return method.invoke(realConnection, args);
     } catch (Throwable t) {
       throw ExceptionUtil.unwrapThrowable(t);
     }
-
   }
 
   private void checkConnection() throws SQLException {

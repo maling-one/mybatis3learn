@@ -43,9 +43,11 @@ public class BeanWrapper extends BaseWrapper {
   @Override
   public Object get(PropertyTokenizer prop) {
     if (prop.getIndex() != null) {
+      // 如果是 List 或 Map，利用 BaseWrapper 中的方法获取属性
       Object collection = resolveCollection(prop, object);
       return getCollectionValue(prop, collection);
     } else {
+      // 获取属性的 Getter Invoker
       return getBeanProperty(prop, object);
     }
   }
@@ -53,9 +55,11 @@ public class BeanWrapper extends BaseWrapper {
   @Override
   public void set(PropertyTokenizer prop, Object value) {
     if (prop.getIndex() != null) {
+      // 如果是 List 或 Map，利用 BaseWrapper 中的方法设置属性
       Object collection = resolveCollection(prop, object);
       setCollectionValue(prop, collection, value);
     } else {
+      // 获取属性的 Setter Invoker
       setBeanProperty(prop, object, value);
     }
   }

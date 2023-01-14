@@ -116,6 +116,7 @@ public class MetaObject {
       if (metaValue == SystemMetaObject.NULL_META_OBJECT) {
         return null;
       } else {
+        // 通过 MetaObject 获取 value
         return metaValue.getValue(prop.getChildren());
       }
     } else {

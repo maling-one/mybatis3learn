@@ -60,9 +60,17 @@ public class XMLIncludeTransformer {
    */
   private void applyIncludes(Node source, final Properties variablesContext, boolean included) {
     if ("include".equals(source.getNodeName())) {
+      // 查找 refid 属性指向的 <sql> 标签，得到其对应的 Node 对象；
       Node toInclude = findSqlFragment(getStringAttribute(source, "refid"), variablesContext);
+      // 解析 <include> 标签下的 <property> 标签，
+      // 将得到的键值对添加到 variablesContext 集合（Properties 类型）中，
+      // 并形成新的 Properties 对象返回，用于替换占位符；
       Properties toIncludeContext = getVariablesContext(source, variablesContext);
+      // 递归执行 applyIncludes()方法，因为在 <sql> 标签的定义中可能会使用 <include> 引用其他 SQL 片段，
+      // 在 applyIncludes()方法递归的过程中，如果遇到“${}”占位符，
+      // 则使用 variablesContext 集合中的键值对进行替换；
       applyIncludes(toInclude, toIncludeContext, true);
+      // 最后，将 <include> 标签替换成 <sql> 标签的内容
       if (toInclude.getOwnerDocument() != source.getOwnerDocument()) {
         toInclude = source.getOwnerDocument().importNode(toInclude, true);
       }

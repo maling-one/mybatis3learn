@@ -21,23 +21,39 @@ import java.util.Iterator;
  * @author Clinton Begin
  */
 public class PropertyTokenizer implements Iterator<PropertyTokenizer> {
+  // 当前 property 名
   private String name;
+  /*
+   * 当前完整分词
+   * 要么是 fullname
+   * 如果存在分隔符 “.”，则表示 “.” 前的所有字符
+   */
   private final String indexedName;
+  /*
+   * 如果是数组，则表示下标，0、1、2...
+   * 如果是 Map，则表示 key
+   */
   private String index;
+  //如果有分隔符 “.”  则表示 “.” 后边剩余的字符串
   private final String children;
 
   public PropertyTokenizer(String fullname) {
     int delim = fullname.indexOf('.');
     if (delim > -1) {
+      // 如果存在分隔符 “.”，则用 name 存储 "." 前的所有字符
       name = fullname.substring(0, delim);
+      // 用 children 存储第一个 “.” 后的剩余字符
       children = fullname.substring(delim + 1);
     } else {
+      // 否则直接用 fullname 作为属性名
       name = fullname;
       children = null;
     }
+    // 存储当前完整分词
     indexedName = name;
     delim = name.indexOf('[');
     if (delim > -1) {
+      //如果存在数组 []，则解析下标，将 name 更新为去掉 [] 后的名称
       index = name.substring(delim + 1, name.length() - 1);
       name = name.substring(0, delim);
     }

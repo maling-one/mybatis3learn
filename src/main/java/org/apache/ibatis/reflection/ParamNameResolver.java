@@ -39,10 +39,9 @@ public class ParamNameResolver {
 
   /**
    * <p>
-   * The key is the index and the value is the name of the parameter.<br />
-   * The name is obtained from {@link Param} if specified. When {@link Param} is not specified,
-   * the parameter index is used. Note that this index could be different from the actual index
-   * when the method has special parameters (i.e. {@link RowBounds} or {@link ResultHandler}).
+   * 键是索引，值是参数的名称。<br> 如果指定，名称从{@link Param}获取。
+   * 当未指定 {@link Param} 时，使用参数索引。
+   * 请注意，当该方法具有特殊参数（即 {@link RowBounds} 或 {@link ResultHandler}）时，此索引可能与实际索引不同。
    * </p>
    * <ul>
    * <li>aMethod(@Param("M") int a, @Param("N") int b) -&gt; {{0, "M"}, {1, "N"}}</li>
@@ -120,18 +119,26 @@ public class ParamNameResolver {
    * @return the named params
    */
   public Object getNamedParams(Object[] args) {
+    // 获取方法中非特殊类型(RowBounds 类型和 ResultHandler 类型)的参数个数
     final int paramCount = names.size();
     if (args == null || paramCount == 0) {
-      return null;
+      return null; // 方法没有非特殊类型参数，返回 null 即可
     } else if (!hasParamAnnotation && paramCount == 1) {
+      // 方法参数列表中没有使用 @Param 注解，且只有一个非特殊类型参数
       Object value = args[names.firstKey()];
       return wrapToMapIfCollection(value, useActualParamName ? names.get(names.firstKey()) : null);
     } else {
+      // 处理存在 @Param 注解或是存在多个非特殊类型参数的场景
+      // param 集合用于记录了参数名称与实参之间的映射关系
+      // 这里的 ParamMap 继承了 HashMap，与 HashMap 的唯一不同是：
+      // 向 ParamMap 中添加已经存在的 key 时，会直接抛出异常，而不是覆盖原有的 Key
       final Map<String, Object> param = new ParamMap<>();
       int i = 0;
       for (Map.Entry<Integer, String> entry : names.entrySet()) {
+        // 将参数名称与实参的映射保存到 param 集合中
         param.put(entry.getValue(), args[entry.getKey()]);
-        // add generic param names (param1, param2, ...)
+        // 同时，为参数创建 "param + 索引" 格式的默认参数名称，具体格式为：param1, param2 等，
+        // 将 "param + 索引" 的默认参数名称与实参的映射关系也保存到 param 集合中
         final String genericParamName = GENERIC_NAME_PREFIX + (i + 1);
         // ensure not to overwrite parameter named with @Param
         if (!names.containsValue(genericParamName)) {

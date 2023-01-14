@@ -66,11 +66,14 @@ public class BlockingCache implements Cache {
 
   @Override
   public Object getObject(Object key) {
-    acquireLock(key);
+    acquireLock(key); // 获取锁
+    // 查询缓存
     Object value = delegate.getObject(key);
     if (value != null) {
+      // 查询到了立刻释放锁
       releaseLock(key);
     }
+    // 返回结果
     return value;
   }
 
@@ -87,20 +90,29 @@ public class BlockingCache implements Cache {
   }
 
   private void acquireLock(Object key) {
+    // 初始化一个全新的 CountDownLatch 对象
     CountDownLatch newLatch = new CountDownLatch(1);
     while (true) {
+      // 尝试将 key 与 newLatch 这个 CountDownLatch 对象关联起来
+      // 如果没有其他线程并发，则返回的 latch 为 null
       CountDownLatch latch = locks.putIfAbsent(key, newLatch);
       if (latch == null) {
+        // 如果当前 key 未关联 CountDownLatch，
+        // 则无其他线程并发，当前线程获取锁成功
         break;
       }
       try {
-        if (timeout > 0) {
+        // 当前 key 已关联 CountDownLatch 对象，则表示有其他线程并发操作当前 key，
+        // 当前线程需要阻塞在并发线程留下的 CountDownLatch 对象 (旧 latch) 之上，
+        // 直至并发线程调用 latch.countDown() 唤醒该线程
+        if (timeout > 0) {// 根据 timeout 的值，决定阻塞超时时间
           boolean acquired = latch.await(timeout, TimeUnit.MILLISECONDS);
+          // 超时未获取到锁，则抛出异常
           if (!acquired) {
             throw new CacheException(
-                "Couldn't get a lock in " + timeout + " for the key " + key + " at the cache " + delegate.getId());
+              "Couldn't get a lock in " + timeout + " for the key " + key + " at the cache " + delegate.getId());
           }
-        } else {
+        } else {// 死等
           latch.await();
         }
       } catch (InterruptedException e) {
