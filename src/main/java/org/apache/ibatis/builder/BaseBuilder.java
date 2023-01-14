@@ -123,12 +123,16 @@ public abstract class BaseBuilder {
     if (typeHandlerAlias == null) {
       return null;
     }
+    // 如果是 typeHandler 的别名，则返回别名指代的类
+    // 如果是 TypeHandler 的全限定名，则直接返回目标类
     Class<?> type = resolveClass(typeHandlerAlias);
+    // 如果 type 不是 TypeHandler 的实现类，抛出异常
     if (type != null && !TypeHandler.class.isAssignableFrom(type)) {
       throw new BuilderException("Type " + type.getName() + " is not a valid TypeHandler because it does not implement TypeHandler interface");
     }
-    @SuppressWarnings("unchecked") // already verified it is a TypeHandler
+    @SuppressWarnings("unchecked") // 类型强转
     Class<? extends TypeHandler<?>> typeHandlerType = (Class<? extends TypeHandler<?>>) type;
+    // 调用重载方法
     return resolveTypeHandler(javaType, typeHandlerType);
   }
 
@@ -136,10 +140,10 @@ public abstract class BaseBuilder {
     if (typeHandlerType == null) {
       return null;
     }
-    // javaType ignored for injected handlers see issue #746 for full detail
+    // 查看这个 TypeHandler 实现否已经注册
     TypeHandler<?> handler = typeHandlerRegistry.getMappingTypeHandler(typeHandlerType);
     if (handler == null) {
-      // not in registry, create a new one
+      // 如果之前未注册，则获取新的 TypeHandler
       handler = typeHandlerRegistry.getInstance(javaType, typeHandlerType);
     }
     return handler;

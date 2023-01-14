@@ -53,7 +53,7 @@ public class FifoCache implements Cache {
 
   @Override
   public void putObject(Object key, Object value) {
-    cycleKeyList(key);
+    cycleKeyList(key);//执行 FIFO 策略清理缓存
     delegate.putObject(key, value);
   }
 
@@ -76,7 +76,9 @@ public class FifoCache implements Cache {
   private void cycleKeyList(Object key) {
     keyList.addLast(key);
     if (keyList.size() > size) {
+      // 如果容量超标，则移除第一个 key
       Object oldestKey = keyList.removeFirst();
+      // 移除第一个 key 对应的缓存
       delegate.removeObject(oldestKey);
     }
   }

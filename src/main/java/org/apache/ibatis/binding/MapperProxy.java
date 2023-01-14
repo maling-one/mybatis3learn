@@ -94,7 +94,12 @@ public class MapperProxy<T> implements InvocationHandler, Serializable {
     try {
       return MapUtil.computeIfAbsent(methodCache, method, m -> {
         if (m.isDefault()) {
+          // 针对 default 方法的处理
           try {
+            // 这里根据 JDK 版本的不同，获取方法对应的 MethodHandle 的方式也有所不同
+            // 在 JDK 8 中使用的是 lookupConstructor 字段，而在 JDK 9 中使用的是
+            // privateLookupInMethod 字段。获取到 MethodHandle 之后，会使用
+            // DefaultMethodInvoker 进行封装
             if (privateLookupInMethod == null) {
               return new DefaultMethodInvoker(getMethodHandleJava8(method));
             } else {
@@ -105,6 +110,7 @@ public class MapperProxy<T> implements InvocationHandler, Serializable {
             throw new RuntimeException(e);
           }
         } else {
+          // 对于其他方法，会创建 MapperMethod 并使用 PlainMethodInvoker 封装
           return new PlainMethodInvoker(new MapperMethod(mapperInterface, method, sqlSession.getConfiguration()));
         }
       });

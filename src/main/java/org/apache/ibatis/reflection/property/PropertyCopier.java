@@ -31,13 +31,16 @@ public final class PropertyCopier {
   public static void copyBeanProperties(Class<?> type, Object sourceBean, Object destinationBean) {
     Class<?> parent = type;
     while (parent != null) {
+      // 拿到当前类中的 field
       final Field[] fields = parent.getDeclaredFields();
       for (Field field : fields) {
         try {
           try {
+            // 调用 JDK 原生反射工具中的 set 方法，完成属性拷贝
             field.set(destinationBean, field.get(sourceBean));
           } catch (IllegalAccessException e) {
             if (Reflector.canControlMemberAccessible()) {
+              // 如果允许修改权限，则修改后再次尝试
               field.setAccessible(true);
               field.set(destinationBean, field.get(sourceBean));
             } else {
@@ -48,6 +51,7 @@ public final class PropertyCopier {
           // Nothing useful to do, will only fail on final fields, which will be ignored.
         }
       }
+      // 递归处理父类
       parent = parent.getSuperclass();
     }
   }

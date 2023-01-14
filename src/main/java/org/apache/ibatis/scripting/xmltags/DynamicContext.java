@@ -44,13 +44,17 @@ public class DynamicContext {
 
   public DynamicContext(Configuration configuration, Object parameterObject) {
     if (parameterObject != null && !(parameterObject instanceof Map)) {
+      // 对于非 Map 类型的实参，会创建对应的 MetaObject 对象，并封装成 ContextMap 对象
       MetaObject metaObject = configuration.newMetaObject(parameterObject);
       boolean existsTypeHandler = configuration.getTypeHandlerRegistry().hasTypeHandler(parameterObject.getClass());
       bindings = new ContextMap(metaObject, existsTypeHandler);
     } else {
+      // 对于 Map 类型的实参，这里会创建一个空的 ContextMap 对象
       bindings = new ContextMap(null, false);
     }
+    // 这里实参对应的 Key 是 "_parameter" 字符串
     bindings.put(PARAMETER_OBJECT_KEY, parameterObject);
+    // key 是 "_databaseId"
     bindings.put(DATABASE_ID_KEY, configuration.getDatabaseId());
   }
 
@@ -84,21 +88,24 @@ public class DynamicContext {
       this.fallbackParameterObject = fallbackParameterObject;
     }
 
+    // ContextMap 覆盖了 get() 方法，做了一个简单的降级逻辑
     @Override
     public Object get(Object key) {
       String strKey = (String) key;
       if (super.containsKey(strKey)) {
+        // 首先，尝试按照 Map 的规则查找 Key，如果查找成功直接返回；
         return super.get(strKey);
       }
-
       if (parameterMetaObject == null) {
         return null;
       }
-
+      // 如果找不到 key，再尝试检查 MetaObject 中是否包含 Key 这个属性
       if (fallbackParameterObject && !parameterMetaObject.hasGetter(strKey)) {
+        //  如果包含的话，则直接读取该属性值返回；
         return parameterMetaObject.getOriginalObject();
       } else {
-        // issue #61 do not modify the context when reading
+        // 最后，根据当前是否包含 parameterObject 相应的 TypeHandler
+        //  决定是返回整个 parameterObject 对象，还是返回 null。
         return parameterMetaObject.getValue(strKey);
       }
     }

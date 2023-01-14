@@ -45,6 +45,7 @@ public final class PreparedStatementLogger extends BaseJdbcLogger implements Inv
   public Object invoke(Object proxy, Method method, Object[] params) throws Throwable {
     try {
       if (Object.class.equals(method.getDeclaringClass())) {
+        // 如果调用 Object 的方法，则直接调用，不做任何其他处理
         return method.invoke(this, params);
       }
       if (EXECUTE_METHODS.contains(method.getName())) {
@@ -53,7 +54,9 @@ public final class PreparedStatementLogger extends BaseJdbcLogger implements Inv
         }
         clearColumnInfo();
         if ("executeQuery".equals(method.getName())) {
+          // 执行查询方法
           ResultSet rs = (ResultSet) method.invoke(statement, params);
+          // 如果有结果集，则创建 ResultSet 的增强代理
           return rs == null ? null : ResultSetLogger.newInstance(rs, statementLog, queryStack);
         } else {
           return method.invoke(statement, params);
@@ -66,15 +69,20 @@ public final class PreparedStatementLogger extends BaseJdbcLogger implements Inv
         }
         return method.invoke(statement, params);
       } else if ("getResultSet".equals(method.getName())) {
+        // 执行方法体
         ResultSet rs = (ResultSet) method.invoke(statement, params);
+        // 如果有结果集，则创建 ResultSet 的增强代理
         return rs == null ? null : ResultSetLogger.newInstance(rs, statementLog, queryStack);
       } else if ("getUpdateCount".equals(method.getName())) {
+        // 执行方法体
         int updateCount = (Integer) method.invoke(statement, params);
         if (updateCount != -1) {
+          // 后置日志
           debug("   Updates: " + updateCount, false);
         }
         return updateCount;
       } else {
+        // 都不是以上方法，直接执行方法体返回
         return method.invoke(statement, params);
       }
     } catch (Throwable t) {

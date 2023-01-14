@@ -30,6 +30,7 @@ public class AmbiguousMethodInvoker extends MethodInvoker {
 
   @Override
   public Object invoke(Object target, Object[] args) throws IllegalAccessException, InvocationTargetException {
+    // 该 Invoker 只抛个异常
     throw new ReflectionException(exceptionMessage);
   }
 }

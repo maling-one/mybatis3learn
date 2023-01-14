@@ -169,16 +169,23 @@ public class MetaClass {
   }
 
   private StringBuilder buildProperty(String name, StringBuilder builder) {
+    // 解析 name 表达式
     PropertyTokenizer prop = new PropertyTokenizer(name);
+    // children 不为空，表明还有下一级（存在 . ）
     if (prop.hasNext()) {
+      //拿到第一层的属性名
       String propertyName = reflector.findPropertyName(prop.getName());
       if (propertyName != null) {
+        // 追加下一级
         builder.append(propertyName);
         builder.append(".");
+        // 构建第一层属性的 MateClass
         MetaClass metaProp = metaClassForProperty(propertyName);
+        // 递归子层级
         metaProp.buildProperty(prop.getChildren(), builder);
       }
     } else {
+      // 如果只有一级，直接作为全名
       String propertyName = reflector.findPropertyName(name);
       if (propertyName != null) {
         builder.append(propertyName);

@@ -60,14 +60,16 @@ public class VendorDatabaseIdProvider implements DatabaseIdProvider {
   }
 
   private String getDatabaseName(DataSource dataSource) throws SQLException {
+    // 从数据库连接中，获取数据库名称
     String productName = getDatabaseProductName(dataSource);
     if (this.properties != null) {
+      // 根据<databaseIdProvider>标签配置，查找自定义数据库名称
       for (Map.Entry<Object, Object> property : properties.entrySet()) {
         if (productName.contains((String) property.getKey())) {
+          // 返回配置的 value
           return (String) property.getValue();
         }
       }
-      // no match, return null
       return null;
     }
     return productName;

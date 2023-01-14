@@ -232,32 +232,39 @@ public final class TypeHandlerRegistry {
   @SuppressWarnings("unchecked")
   private <T> TypeHandler<T> getTypeHandler(Type type, JdbcType jdbcType) {
     if (ParamMap.class.equals(type)) {
+      // 过滤掉ParamMap类型
       return null;
     }
+    // 根据Java类型查找对应的TypeHandler集合
     Map<JdbcType, TypeHandler<?>> jdbcHandlerMap = getJdbcHandlerMap(type);
     TypeHandler<?> handler = null;
     if (jdbcHandlerMap != null) {
+      // 根据JdbcType类型查找对应的TypeHandler实例
       handler = jdbcHandlerMap.get(jdbcType);
       if (handler == null) {
+        // 没有对应的TypeHandler实例，则使用null对应的TypeHandler
         handler = jdbcHandlerMap.get(null);
       }
       if (handler == null) {
-        // #591
+        // 如果jdbcHandlerMap只注册了一个TypeHandler，则使用此TypeHandler对象
         handler = pickSoleHandler(jdbcHandlerMap);
       }
     }
-    // type drives generics here
     return (TypeHandler<T>) handler;
   }
 
   private Map<JdbcType, TypeHandler<?>> getJdbcHandlerMap(Type type) {
+    // 首先查找指定 Java 类型对应的 TypeHandler 集合
     Map<JdbcType, TypeHandler<?>> jdbcHandlerMap = typeHandlerMap.get(type);
     if (jdbcHandlerMap != null) {
+      // 如果已经初始化，直接使用集合进行查询
       return NULL_TYPE_HANDLER_MAP.equals(jdbcHandlerMap) ? null : jdbcHandlerMap;
     }
+    // 如果没有初始化，则在这里初始化指定 Java 类型的 TypeHandler 集合
     if (type instanceof Class) {
       Class<?> clazz = (Class<?>) type;
       if (Enum.class.isAssignableFrom(clazz)) {
+        // 针对枚举类型的处理
         Class<?> enumClass = clazz.isAnonymousClass() ? clazz.getSuperclass() : clazz;
         jdbcHandlerMap = getJdbcHandlerMapForEnumInterfaces(enumClass, enumClass);
         if (jdbcHandlerMap == null) {
@@ -265,9 +272,11 @@ public final class TypeHandlerRegistry {
           return typeHandlerMap.get(enumClass);
         }
       } else {
+        // 查找父类关联的 TypeHandler 集合，并将其作为 clazz 对应的 TypeHandler 集合
         jdbcHandlerMap = getJdbcHandlerMapForSuperclass(clazz);
       }
     }
+    // 如果上述查找皆失败，则以 NULL_TYPE_HANDLER_MAP 作为 clazz 对应的 TypeHandler 集合
     typeHandlerMap.put(type, jdbcHandlerMap == null ? NULL_TYPE_HANDLER_MAP : jdbcHandlerMap);
     return jdbcHandlerMap;
   }
@@ -295,11 +304,13 @@ public final class TypeHandlerRegistry {
     Class<?> superclass = clazz.getSuperclass();
     if (superclass == null || Object.class.equals(superclass)) {
       return null;
+      // 父类为Object或null则查找结束
     }
     Map<JdbcType, TypeHandler<?>> jdbcHandlerMap = typeHandlerMap.get(superclass);
     if (jdbcHandlerMap != null) {
       return jdbcHandlerMap;
     } else {
+      // 顺着继承树，递归查找父类对应的TypeHandler集合
       return getJdbcHandlerMapForSuperclass(superclass);
     }
   }
@@ -321,6 +332,7 @@ public final class TypeHandlerRegistry {
     return unknownTypeHandler;
   }
 
+  // 如果是 jdbcType，直接添加映射到 jdbcTypeHandlerMap
   public void register(JdbcType jdbcType, TypeHandler<?> handler) {
     jdbcTypeHandlerMap.put(jdbcType, handler);
   }
@@ -357,21 +369,27 @@ public final class TypeHandlerRegistry {
   }
 
   // java type + handler
-
+  // 如果是 javaType，则调用重载方法
   public <T> void register(Class<T> javaType, TypeHandler<? extends T> typeHandler) {
     register((Type) javaType, typeHandler);
   }
 
+  // 配置该 TypeHandler 实现类能够处理的 JDBC 类型集合
   private <T> void register(Type javaType, TypeHandler<? extends T> typeHandler) {
+    // 尝试从 TypeHandler 类中获取 @MappedJdbcTypes 注解
     MappedJdbcTypes mappedJdbcTypes = typeHandler.getClass().getAnnotation(MappedJdbcTypes.class);
     if (mappedJdbcTypes != null) {
+      // 根据 @MappedJdbcTypes 注解指定的 JDBC 类型进行注册
       for (JdbcType handledJdbcType : mappedJdbcTypes.value()) {
+        // 交给下面的三参数重载处理
         register(javaType, handledJdbcType, typeHandler);
       }
+      // 如果支持 jdbcType 为 null，也是交给下面的三参数重载处理
       if (mappedJdbcTypes.includeNullJdbcType()) {
         register(javaType, null, typeHandler);
       }
     } else {
+      // 如果没有配置 MappedJdbcTypes 注解，也是交给下面的三参数重载处理
       register(javaType, null, typeHandler);
     }
   }
@@ -388,15 +406,20 @@ public final class TypeHandlerRegistry {
     register((Type) type, jdbcType, handler);
   }
 
+  // 映射 javaType 与 jdbcType 的关系，同时注册转换时使用的 TypeHandler
   private void register(Type javaType, JdbcType jdbcType, TypeHandler<?> handler) {
     if (javaType != null) {
+      // 检测是否明确指定了TypeHandler能够处理的Java类型
+      // 根据指定的Java类型，从typeHandlerMap集合中获取相应的TypeHandler集合
       Map<JdbcType, TypeHandler<?>> map = typeHandlerMap.get(javaType);
       if (map == null || map == NULL_TYPE_HANDLER_MAP) {
         map = new HashMap<>();
       }
+      // 将TypeHandler实例记录到typeHandlerMap集合
       map.put(jdbcType, handler);
       typeHandlerMap.put(javaType, map);
     }
+    // 向allTypeHandlersMap集合注册TypeHandler类型和对应的TypeHandler对象
     allTypeHandlersMap.put(handler.getClass(), handler);
   }
 
@@ -408,8 +431,10 @@ public final class TypeHandlerRegistry {
 
   public void register(Class<?> typeHandlerClass) {
     boolean mappedTypeFound = false;
+    // 读取TypeHandler类中定义的@MappedTypes注解
     MappedTypes mappedTypes = typeHandlerClass.getAnnotation(MappedTypes.class);
     if (mappedTypes != null) {
+      // 根据@MappedTypes注解中指定的Java类型进行注册，最终调用的还是三参数重载方法
       for (Class<?> javaTypeClass : mappedTypes.value()) {
         register(javaTypeClass, typeHandlerClass);
         mappedTypeFound = true;
@@ -462,11 +487,13 @@ public final class TypeHandlerRegistry {
 
   public void register(String packageName) {
     ResolverUtil<Class<?>> resolverUtil = new ResolverUtil<>();
+    // 首先读取指定包下面的全部的 TypeHandler 实现类
     resolverUtil.find(new ResolverUtil.IsA(TypeHandler.class), packageName);
     Set<Class<? extends Class<?>>> handlerSet = resolverUtil.getClasses();
     for (Class<?> type : handlerSet) {
-      //Ignore inner classes and interfaces (including package-info.java) and abstract classes
+      //忽略内部类和接口（包括 package-info.java）和抽象类
       if (!type.isAnonymousClass() && !type.isInterface() && !Modifier.isAbstract(type.getModifiers())) {
+        // 调用的是前边的读取 `@MappedTypes` 注解的 `register()` 方法重载
         register(type);
       }
     }
