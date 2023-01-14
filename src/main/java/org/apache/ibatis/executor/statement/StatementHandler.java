@@ -30,15 +30,16 @@ import org.apache.ibatis.session.ResultHandler;
  */
 public interface StatementHandler {
 
+  // 创建 Statement 对象
   Statement prepare(Connection connection, Integer transactionTimeout)
       throws SQLException;
-
+  // 为 SQL 语句绑定实参
   void parameterize(Statement statement)
       throws SQLException;
-
+  // 批量执行 SQL 语句
   void batch(Statement statement)
       throws SQLException;
-
+  // 执行单条 SQL 语句
   int update(Statement statement)
       throws SQLException;
 
