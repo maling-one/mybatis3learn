@@ -40,12 +40,16 @@ import org.apache.ibatis.transaction.TransactionFactory;
 public class ResultLoader {
 
   protected final Configuration configuration;
+  // 用于执行延迟 SQL 的线程池
   protected final Executor executor;
   protected final MappedStatement mappedStatement;
+  // SQL 的实参
   protected final Object parameterObject;
+  // 延迟加载的对象类型
   protected final Class<?> targetType;
   protected final ObjectFactory objectFactory;
   protected final CacheKey cacheKey;
+  // 延迟执行的 SQL 语句
   protected final BoundSql boundSql;
   protected final ResultExtractor resultExtractor;
   protected final long creatorThreadId;
@@ -67,7 +71,9 @@ public class ResultLoader {
   }
 
   public Object loadResult() throws SQLException {
+    // 先通过 selectList() 方法执行 boundSql 这条延迟加载的 SQL 语句
     List<Object> list = selectList();
+    // 接下来通过 resultExtractor 从这个 List 集合中提取到延迟加载的真正对象
     resultObject = resultExtractor.extractObjectFromList(list, targetType);
     return resultObject;
   }
@@ -78,6 +84,7 @@ public class ResultLoader {
       localExecutor = newExecutor();
     }
     try {
+      // 使用 Executor 来执行 SQL 语句
       return localExecutor.query(mappedStatement, parameterObject, RowBounds.DEFAULT, Executor.NO_RESULT_HANDLER, cacheKey, boundSql);
     } finally {
       if (localExecutor != executor) {
