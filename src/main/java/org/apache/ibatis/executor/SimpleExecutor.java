@@ -58,8 +58,13 @@ public class SimpleExecutor extends BaseExecutor {
     Statement stmt = null;
     try {
       Configuration configuration = ms.getConfiguration();
+      // 创建StatementHandler对象，实际返回的是RoutingStatementHandler对象
+      // 其中根据MappedStatement.statementType选择具体的StatementHandler实现
       StatementHandler handler = configuration.newStatementHandler(wrapper, ms, parameter, rowBounds, resultHandler, boundSql);
+      // 完成StatementHandler的创建和初始化，该方法会调用StatementHandler.prepare()方法创建
+      // Statement对象，然后调用StatementHandler.parameterize()方法处理占位符
       stmt = prepareStatement(handler, ms.getStatementLog());
+      // 调用StatementHandler.query()方法，执行SQL语句，并通过ResultSetHandler完成结果集的映射
       return handler.query(stmt, resultHandler);
     } finally {
       closeStatement(stmt);

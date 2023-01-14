@@ -48,8 +48,12 @@ public class SimpleStatementHandler extends BaseStatementHandler {
     KeyGenerator keyGenerator = mappedStatement.getKeyGenerator();
     int rows;
     if (keyGenerator instanceof Jdbc3KeyGenerator) {
+      // 首先会通过 Statement.execute() 方法执行 insert、update 或 delete 类型的 SQL 语句
       statement.execute(sql, Statement.RETURN_GENERATED_KEYS);
+      // 然后通过 Statement.getUpdateCount() 方法获取 SQL 语句影响的行数并返回
       rows = statement.getUpdateCount();
+      // 最后执行 KeyGenerator.processAfter() 方法查询主键并填充相应属性
+      // （processBefore() 方法已经在 prepare() 方法中执行过了）
       keyGenerator.processAfter(executor, mappedStatement, statement, parameterObject);
     } else if (keyGenerator instanceof SelectKeyGenerator) {
       statement.execute(sql);
@@ -70,8 +74,11 @@ public class SimpleStatementHandler extends BaseStatementHandler {
 
   @Override
   public <E> List<E> query(Statement statement, ResultHandler resultHandler) throws SQLException {
+    // 获取SQL语句
     String sql = boundSql.getSql();
+    // 执行SQL语句
     statement.execute(sql);
+    // 处理ResultSet映射，得到结果对象
     return resultSetHandler.handleResultSets(statement);
   }
 
