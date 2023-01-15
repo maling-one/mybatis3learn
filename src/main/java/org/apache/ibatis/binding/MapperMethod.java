@@ -269,12 +269,18 @@ public class MapperMethod {
 
     private MappedStatement resolveMappedStatement(Class<?> mapperInterface, String methodName,
         Class<?> declaringClass, Configuration configuration) {
+      // 将 Mapper 接口名称和方法名称拼接起来作为 SQL 语句唯一标识
       String statementId = mapperInterface.getName() + "." + methodName;
+      // 检测 Configuration 中是否包含相应的 MappedStatement 对象
       if (configuration.hasStatement(statementId)) {
         return configuration.getMappedStatement(statementId);
       } else if (mapperInterface.equals(declaringClass)) {
+        // 如果方法就定义在当前接口中，则证明没有对应的 SQL 语句，返回 null
         return null;
       }
+      // 如果当前检查的 Mapper 接口 (mapperInterface) 中不是定义该方法的接口 (declaringClass)，
+      // 则会从 mapperInterface 开始，沿着继承关系向上查找递归每个接口，
+      // 查找该方法对应的 MappedStatement 对象
       for (Class<?> superInterface : mapperInterface.getInterfaces()) {
         if (declaringClass.isAssignableFrom(superInterface)) {
           MappedStatement ms = resolveMappedStatement(superInterface, methodName,
@@ -302,7 +308,7 @@ public class MapperMethod {
     private final ParamNameResolver paramNameResolver;
 
     public MethodSignature(Configuration configuration, Class<?> mapperInterface, Method method) {
-// 通过 TypeParameterResolver 工具类解析方法的返回值类型，初始化 returnType 字段值
+      // 通过 TypeParameterResolver 工具类解析方法的返回值类型，初始化 returnType 字段值
       Type resolvedReturnType = TypeParameterResolver.resolveReturnType(method, mapperInterface);
       if (resolvedReturnType instanceof Class<?>) {
         this.returnType = (Class<?>) resolvedReturnType;
