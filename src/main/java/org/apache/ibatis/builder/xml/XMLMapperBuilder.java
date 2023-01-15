@@ -92,13 +92,18 @@ public class XMLMapperBuilder extends BaseBuilder {
 
   public void parse() {
     if (!configuration.isResourceLoaded(resource)) {
+      // 解析整个 Mapper.xml 映射文件的内容
       configurationElement(parser.evalNode("/mapper"));
+      // 获取当前 Mapper.xml 映射文件指定的 Mapper 接口
       configuration.addLoadedResource(resource);
+      // 并进行注册
       bindMapperForNamespace();
     }
-
+    // 处理解析失败的 <resultMap> 标签
     parsePendingResultMaps();
+    // 处理解析失败的 <cache-ref> 标签
     parsePendingCacheRefs();
+    // 处理解析失败的 SQL 语句标签
     parsePendingStatements();
   }
 
@@ -108,16 +113,23 @@ public class XMLMapperBuilder extends BaseBuilder {
 
   private void configurationElement(XNode context) {
     try {
+      // 获取 <mapper> 标签中的 namespace 属性，同时会进行多种边界检查
       String namespace = context.getStringAttribute("namespace");
       if (namespace == null || namespace.isEmpty()) {
         throw new BuilderException("Mapper's namespace cannot be empty");
       }
       builderAssistant.setCurrentNamespace(namespace);
+      // 解析 <cache-ref> 标签
       cacheRefElement(context.evalNode("cache-ref"));
+      // 解析 <cache> 标签
       cacheElement(context.evalNode("cache"));
+      // 解析 <parameterMap> 标签
       parameterMapElement(context.evalNodes("/mapper/parameterMap"));
+      // 解析 <resultMap> 标签
       resultMapElements(context.evalNodes("/mapper/resultMap"));
+      // 解析 <sql> 标签；
       sqlElement(context.evalNodes("/mapper/sql"));
+      // 解析 <select>、<insert>、<update>、<delete> 等 SQL 标签
       buildStatementFromContext(context.evalNodes("select|insert|update|delete"));
     } catch (Exception e) {
       throw new BuilderException("Error parsing Mapper XML. The XML location is '" + resource + "'. Cause: " + e, e);
