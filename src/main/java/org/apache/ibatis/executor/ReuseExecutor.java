@@ -37,7 +37,7 @@ import org.apache.ibatis.transaction.Transaction;
  * @author Clinton Begin
  */
 public class ReuseExecutor extends BaseExecutor {
-
+  // 缓存已有的 Statement 对象，该缓存的 Key 是 SQL 模板，Value 是 SQL 模板对应的 Statement 对象
   private final Map<String, Statement> statementMap = new HashMap<>();
 
   public ReuseExecutor(Configuration configuration, Transaction transaction) {
@@ -70,9 +70,11 @@ public class ReuseExecutor extends BaseExecutor {
 
   @Override
   public List<BatchResult> doFlushStatements(boolean isRollback) {
+    // 关闭statementMap集合中缓存的全部Statement对象
     for (Statement stmt : statementMap.values()) {
       closeStatement(stmt);
     }
+    // 清空statementMap集合
     statementMap.clear();
     return Collections.emptyList();
   }
@@ -81,10 +83,10 @@ public class ReuseExecutor extends BaseExecutor {
     Statement stmt;
     BoundSql boundSql = handler.getBoundSql();
     String sql = boundSql.getSql();
-    if (hasStatementFor(sql)) {
-      stmt = getStatement(sql);
+    if (hasStatementFor(sql)) {// 查询缓存
+      stmt = getStatement(sql); // 重用
       applyTransactionTimeout(stmt);
-    } else {
+    } else { // 查不到再创建
       Connection connection = getConnection(statementLog);
       stmt = handler.prepare(connection, transaction.getTimeout());
       putStatement(sql, stmt);
@@ -95,6 +97,7 @@ public class ReuseExecutor extends BaseExecutor {
 
   private boolean hasStatementFor(String sql) {
     try {
+      // 查询缓存
       Statement statement = statementMap.get(sql);
       return statement != null && !statement.getConnection().isClosed();
     } catch (SQLException e) {

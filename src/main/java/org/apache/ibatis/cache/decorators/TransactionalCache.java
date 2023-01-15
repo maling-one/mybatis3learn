@@ -78,6 +78,7 @@ public class TransactionalCache implements Cache {
 
   @Override
   public void putObject(Object key, Object object) {
+    // 将数据暂存到entriesToAddOnCommit集合
     entriesToAddOnCommit.put(key, object);
   }
 
@@ -113,6 +114,7 @@ public class TransactionalCache implements Cache {
 
   private void flushPendingEntries() {
     for (Map.Entry<Object, Object> entry : entriesToAddOnCommit.entrySet()) {
+      // 将entriesToAddOnCommit集合中的数据添加到二级缓存
       delegate.putObject(entry.getKey(), entry.getValue());
     }
     for (Object entry : entriesMissedInCache) {
