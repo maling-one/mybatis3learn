@@ -344,17 +344,22 @@ public class SqlSessionManager implements SqlSessionFactory, SqlSession {
 
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+      // 从ThreadLocal中获取 sqlSession
       final SqlSession sqlSession = SqlSessionManager.this.localSqlSession.get();
       if (sqlSession != null) {
         try {
+          // 拿到了直接执行目标方法
           return method.invoke(sqlSession, args);
         } catch (Throwable t) {
           throw ExceptionUtil.unwrapThrowable(t);
         }
       } else {
+        // 拿不到利用 sqlSessionFactory 创建 SqlSession
         try (SqlSession autoSqlSession = openSession()) {
           try {
+            // 执行目标方法
             final Object result = method.invoke(autoSqlSession, args);
+            // 提交事务
             autoSqlSession.commit();
             return result;
           } catch (Throwable t) {
